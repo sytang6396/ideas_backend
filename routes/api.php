@@ -24,5 +24,8 @@ Route::group([
         'prefix' => 'draw'
     ], function () {
         Route::get('/{id?}', [EventController::class, 'index']);
+        Route::post('/', [EventController::class, 'draw']);
+        Route::post('/update', [EventController::class, 'update']);
+
     });
 });

@@ -16,6 +16,40 @@ class EventController extends Controller
     {
         $user = Auth::user();
         $user_id = $user->id;
+        $eventDrawHistory = EventDrawHistory::getEventDrawHistory(
+            [
+                'user_id' => $user_id,
+                'draw_date' => Carbon::now()->toDateString(),
+                'detail' => true
+            ]
+        );
+        if (!$eventDrawHistory) {
+            return response()->json([
+                'message'=> 'No event draw history found',
+                'status' => '404',
+                'data'=> []
+            ], 404);
+        }
+        return response()->json([
+            'message'=> 'success',
+            'status' => '200',
+            'data'=> $eventDrawHistory
+        ]);
+    }
+
+    public function draw(Request $request, $id = null)
+    {
+        $user = Auth::user();
+        $user_id = $user->id;
+        //if today isaccept count is 1, return error
+        $todayIsAcceptCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', 1)->first();
+        if ($todayIsAcceptCount) {
+            return response()->json([
+                'message'=> 'Enjoy your event!',
+                'status' => '400',
+                'data'=> $todayIsAcceptCount->uid
+            ], 400);
+        }
         // $todayIsAcceptCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', -1)->count();
         // if ($todayIsAcceptCount >= 2) {
         //     return response()->json([
@@ -27,8 +61,8 @@ class EventController extends Controller
         EventDrawHistory::where('user_id', $user_id)->where('status', 1)->where('draw_date', Carbon::now()->toDateString())->update(['isAccept' => -1]);
         $last10EventIds = EventDrawHistory::orderBy('created_at', 'desc')->limit(10)->pluck('event_id');
         $event = Event::whereNotIn('event.id', $last10EventIds)
-            ->join('event_characteristic', 'event.id', '=', 'event_characteristic.event_id')
-            ->join('event_period', 'event.id', '=', 'event_period.event_id')
+            ->leftJoin('event_characteristic', 'event.id', '=', 'event_characteristic.event_id')
+            ->leftJoin('event_period', 'event.id', '=', 'event_period.event_id')
             ->where('event.status', 1)
             ->inRandomOrder()
             ->first([
@@ -133,6 +167,34 @@ class EventController extends Controller
             'data'=> [
                 'event' => $formattedEvent
             ],
+        ]);
+    }
+
+    public function update(Request $request, $id = null)
+    {
+        $user = Auth::user();
+        $user_id = $user->id;
+        $uid = $request->post('uid');
+        $isAccept = $request->post('isAccept');
+
+        $eventDrawHistory = EventDrawHistory::updateHistory([
+            'uid' => $uid,
+            'user_id' => $user_id,
+            'isAccept' => $isAccept
+        ]);
+        
+        if (!$eventDrawHistory) {
+            return response()->json([
+                'message'=> 'Event draw history not found',
+                'status' => '404',
+                'data'=> []
+            ], 404);
+        }
+        
+        return response()->json([
+            'message'=> 'success',
+            'status' => '200',
+            'data'=> []
         ]);
     }
 }
