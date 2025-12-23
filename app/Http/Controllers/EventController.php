@@ -23,17 +23,23 @@ class EventController extends Controller
                 'detail' => true
             ]
         );
+        $todayDrawCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('status', 1)->count();
         if (!$eventDrawHistory) {
             return response()->json([
-                'message'=> 'No event draw history found',
+                'message'=> 'Please draw your event first.',
                 'status' => '404',
-                'data'=> []
-            ], 404);
+                'data'=> [
+                    'countDraw' => $todayDrawCount,
+                ]
+            ], 200);
         }
         return response()->json([
             'message'=> 'success',
             'status' => '200',
-            'data'=> $eventDrawHistory
+            'data'=> [
+                'countDraw' => $todayDrawCount,
+                'event' => $eventDrawHistory
+            ],
         ]);
     }
 
@@ -41,24 +47,23 @@ class EventController extends Controller
     {
         $user = Auth::user();
         $user_id = $user->id;
-        //if today isaccept count is 1, return error
-        $todayIsAcceptCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', 1)->first();
+        $todayIsAcceptCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', 1)->where('status', 1)->first();
         if ($todayIsAcceptCount) {
             return response()->json([
                 'message'=> 'Enjoy your event!',
-                'status' => '400',
+                'status' => '200',
                 'data'=> $todayIsAcceptCount->uid
-            ], 400);
+            ], 200);
         }
-        // $todayIsAcceptCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', -1)->count();
-        // if ($todayIsAcceptCount >= 2) {
-        //     return response()->json([
-        //         'message'=> 'You have reached the maximum number of attempts for today',
-        //         'status' => '400',
-        //         'data'=> []
-        //     ], 400);
-        // }
-        EventDrawHistory::where('user_id', $user_id)->where('status', 1)->where('draw_date', Carbon::now()->toDateString())->update(['isAccept' => -1]);
+        $todayDrawCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('isAccept', -1)->where('status', 1)->count();
+        if ($todayDrawCount >= 2) {
+            return response()->json([
+                'message'=> 'You have reached the maximum number of attempts for today',
+                'status' => '400',
+                'data'=> []
+            ], 200);
+        }
+        EventDrawHistory::where('user_id', $user_id)->where('status', 1)->where('draw_date', Carbon::now()->toDateString())->where('status', 1)->update(['isAccept' => -1]);
         $last10EventIds = EventDrawHistory::orderBy('created_at', 'desc')->limit(10)->pluck('event_id');
         $event = Event::whereNotIn('event.id', $last10EventIds)
             ->leftJoin('event_characteristic', 'event.id', '=', 'event_characteristic.event_id')
@@ -160,11 +165,12 @@ class EventController extends Controller
                 'sun_end_time' => $event->sun_end_time,
             ]
         ];
-        
+        $todayDrawCount = EventDrawHistory::where('user_id', $user_id)->where('draw_date', Carbon::now()->toDateString())->where('status', 1)->count();
         return response()->json([
             'message'=> 'success',
             'status' => '200',
             'data'=> [
+                'countDraw' => $todayDrawCount,
                 'event' => $formattedEvent
             ],
         ]);

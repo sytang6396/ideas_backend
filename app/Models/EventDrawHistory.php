@@ -46,6 +46,7 @@ class EventDrawHistory extends Model
         // Format output to match draw() method structure
         $formattedEvent = [
             'draw_id' => $eventDrawHistory->uid,
+            'isAccept' => $eventDrawHistory->isAccept,
             'name_tc' => $eventDrawHistory->name_tc,
             'name_en' => $eventDrawHistory->name_en,
             'address_tc' => $eventDrawHistory->address_tc,
